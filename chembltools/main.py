@@ -21,6 +21,8 @@ def get_chembl_id(compounds):
     """
     molecule = new_client.molecule
     ids = dict()
+    if isinstance(compounds, str):
+        compounds = [compounds]
     for compound in compounds:
         res = molecule.filter(pref_name__iexact=compound)
         if len(res) == 0:
