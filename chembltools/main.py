@@ -41,7 +41,7 @@ def get_chembl_id(compounds):
 
 def get_similar_molecules(chembl_ids, similarity=90, show_similarity=False):
     """
-    Get similar moleules based on a structural similarity search.
+    Get similar molecules based on a structural similarity search.
     Given a list of chembl ID's
 
     Parameters:
