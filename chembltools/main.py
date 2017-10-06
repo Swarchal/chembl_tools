@@ -41,7 +41,15 @@ def get_chembl_id(compounds):
 
 def get_similar_molecules(chembl_ids, similarity=90):
     """
-    docstring
+    Get similar moleules based on a structural similarity search.
+    Given a list of chembl ID's
+
+    Returns:
+    --------
+    A dictionary of lists, keys are query molecules.
+    e.g:
+        {search_chembl_id_0: [similar1, similar2, ...],
+         search_chembl_id_1: [similar2, similar3, ...]}
     """
     similar_molecules = {}
     similarity_query = new_client.similarity
@@ -57,6 +65,28 @@ def get_similar_molecules(chembl_ids, similarity=90):
     return similar_molecules
 
 
+def get_similar_molecules_smile(smiles, similarity=90):
+    """
+    Get similar molecules based on structural similarity search.
+    Given a list of structures in SMILE format.
+
+    Returns:
+    --------
+    A dictionary of lists, keys are query molecules.
+    e.g:
+        {search_smile_0: [similar_chembl_ids ...],
+         search_smile_1: [similar_chembl_ids ...]}
+    """
+    similar_molecules = []
+    similarity_query = new_client.similarity
+    for compound in smiles:
+        similars = []
+        res = similarity_query.filter(smiles=compound, similarity=similarity)
+        for entry in res:
+            similars.append(entry["molecule_chembl_id"])
+        similar_molecules[compound] = similars
+    return similar_molecules
+
 
 def get_target_ids(chembl_ids, organism="Homo sapiens"):
     """
@@ -69,7 +99,7 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
     ID_forms = dict()
     for x in chembl_ids:
         ID_forms[x] = set()
-    
+
     for i in range(0, len(chembl_ids), chunk_size):
         for form in new_client.molecule_form.filter(parent_chembl_id__in=chembl_ids[i:i + chunk_size]):
             ID_forms[form['parent_chembl_id']].add(form['molecule_chembl_id'])
@@ -77,14 +107,14 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
     for i in range(0, len(chembl_ids), chunk_size):
         for form in new_client.molecule_form.filter(molecule_chembl_id__in=chembl_ids[i:i + chunk_size]):
             ID_forms[form['molecule_chembl_id']].add(form['parent_chembl_id'])
-    
+
     values = []
     for x in ID_forms.values():
         values.extend(x)
     forms_to_ID = dict()
     for x in values:
         forms_to_ID[x] = set()
-    
+
     for k in forms_to_ID:
         for parent, molecule in ID_forms.items():
             if k in molecule:
@@ -107,7 +137,6 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
                 set(sum([[comp["accession"] for comp in t["target_components"]] for t in targets],[]))
             )
         compounds2targets[key] = uniprots
-
     return compounds2targets
 
 
@@ -117,8 +146,7 @@ def get_uniprot_name(uniprot_ids):
     """
     uniprot_name_dict = {}
     for identifier in uniprot_ids:
-        url = "http://www.uniprot.org/uniprot/{}.txt".format(identifier)
-        data = urllib.request.urlopen(url)
+        data = _get_go_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DE   RecName:"):
@@ -130,13 +158,12 @@ def get_uniprot_name(uniprot_ids):
 
 def get_uniprot_info(uniprot_ids):
     """
-    docstring
+    get the entire uniprot website text for a list of uniprot ID's
     """
     uniprot_info_dict = {}
     for identifier in uniprot_ids:
         info = []
-        url = "http://www.uniprot.org/uniprot/{}.txt".format(identifier)
-        data = urllib.request.urlopen(url)
+        data = _get_go_data(identifier)
         for line in data:
             info.append(line.decode("utf-8"))
         uniprot_info_dict[identifier] = info
@@ -150,8 +177,7 @@ def get_go_name_from_uniprot_id(uniprot_ids):
     go_term_dict = {}
     for identifier in uniprot_ids:
         go_terms = []
-        url = "http://www.uniprot.org/uniprot/{}.txt".format(identifier)
-        data = urllib.request.urlopen(url)
+        data = _get_go_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -168,8 +194,7 @@ def get_go_code_from_uniprot_id(uniprot_ids):
     go_code_dict = {}
     for identifier in uniprot_ids:
         go_codes = []
-        url = "http://www.uniprot.org/uniprot/{}.txt".format(identifier)
-        data = urllib.request.urlopen(url)
+        data = _get_go_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -181,15 +206,14 @@ def get_go_code_from_uniprot_id(uniprot_ids):
 
 def get_go_from_uniprot_id(uniprot_ids):
     """
-    get both go code and descriptive name
+    get both go code and descriptive name for a list of uniprot ID's
     e.g.
         {uniprot_id: [go_code, go_name]}
     """
     go_dict = {}
     for identifier in uniprot_ids:
         go_codes, go_names = [], []
-        url = "http://www.uniprot.org/uniprot/{}.txt".format(identifier)
-        data = urllib.request.urlopen(url)
+        data = _get_go_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -197,3 +221,14 @@ def get_go_from_uniprot_id(uniprot_ids):
                 go_names.append(line.split(":")[-2].split(";")[-2])
         go_dict[identifier] = list(zip(go_codes, go_names))
     return go_dict
+
+
+def _get_go_data(uniprot_code):
+    """
+    internal function to fetch all uniprot text data for a single uniprot ID
+    """
+    url = "http://www.uniprot.org/uniprot/{}.txt".format(uniprot_code)
+    data = urllib.request.urlopen(url)
+    return data
+
+
