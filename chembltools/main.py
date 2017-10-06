@@ -39,17 +39,35 @@ def get_chembl_id(compounds):
     return ids
 
 
-def get_similar_molecules(chembl_ids, similarity=90):
+def get_similar_molecules(chembl_ids, similarity=90, show_similarity=False):
     """
     Get similar moleules based on a structural similarity search.
     Given a list of chembl ID's
 
+    Parameters:
+    -----------
+    chembl_ids: list-like
+        CHEMBL ID codes
+
+    similarity: numeric, between 0 and 100 (default = 90)
+        minimum structural similarity threshold to determine a match
+
+    show_similarity: Boolean (default = False)
+        whether or not to return the similarity score alongside
+        the matching CHEMBL ID's
+
+
     Returns:
     --------
     A dictionary of lists, keys are query molecules.
-    e.g:
+
+    e.g if `show_similarity is False`:
         {search_chembl_id_0: [similar1, similar2, ...],
          search_chembl_id_1: [similar2, similar3, ...]}
+
+    e.g if `show_similarity is True`:
+        {search_chembl_id_0: [(similar1, 90.2), (similar2, 94.0), ...],
+         search_chembl_id_1: [(similar2, 98.4), (similar3, 92.1), ...]}
     """
     similar_molecules = {}
     similarity_query = new_client.similarity
@@ -60,30 +78,56 @@ def get_similar_molecules(chembl_ids, similarity=90):
             if entry["molecule_chembl_id"] == compound:
                 # ignore query compound similarity matching itself
                 continue
-            similars.append(entry["molecule_chembl_id"])
+            if show_similarity:
+                similars.append((entry["molecule_chembl_id"],
+                                 float(entry["similarity"])))
+            else:
+                similars.append(entry["molecule_chembl_id"]))
         similar_molecules[compound] = similars
     return similar_molecules
 
 
-def get_similar_molecules_smile(smiles, similarity=90):
+def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
     """
-    Get similar molecules based on structural similarity search.
+    Get similar moleules based on a structural similarity.
     Given a list of structures in SMILE format.
+
+    Parameters:
+    -----------
+    smiles: list-like
+        SMILE strings
+
+    similarity: numeric, between 0 and 100 (default = 90)
+        minimum structural similarity threshold to determine a match
+
+    show_similarity: Boolean (default = False)
+        whether or not to return the similarity score alongside
+        the matching CHEMBL ID's
+
 
     Returns:
     --------
     A dictionary of lists, keys are query molecules.
-    e.g:
-        {search_smile_0: [similar_chembl_ids ...],
-         search_smile_1: [similar_chembl_ids ...]}
+
+    e.g if `show_similarity is False`:
+        {smile1: [similar1, similar2, ...],
+         smile2: [similar2, similar3, ...]}
+
+    e.g if `show_similarity is True`:
+        {smile1: [(similar1, 90.2), (similar2, 94.0), ...],
+         smile2: [(similar2, 98.4), (similar3, 92.1), ...]}
     """
-    similar_molecules = []
+    similar_molecules = {}
     similarity_query = new_client.similarity
     for compound in smiles:
         similars = []
         res = similarity_query.filter(smiles=compound, similarity=similarity)
         for entry in res:
-            similars.append(entry["molecule_chembl_id"])
+            if show_similarity:
+                similars.append((entry["molecule_chembl_id"],
+                                 float(entry["similarity"])))
+            else:
+                similars.append(entry["molecule_chembl_id"])
         similar_molecules[compound] = similars
     return similar_molecules
 
@@ -101,12 +145,16 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
         ID_forms[x] = set()
 
     for i in range(0, len(chembl_ids), chunk_size):
-        for form in new_client.molecule_form.filter(parent_chembl_id__in=chembl_ids[i:i + chunk_size]):
-            ID_forms[form['parent_chembl_id']].add(form['molecule_chembl_id'])
+        for form in new_client.molecule_form\
+            .filter(parent_chembl_id__in=chembl_ids[i:i + chunk_size]):
+            ID_forms[form['parent_chembl_id']]\
+                .add(form['molecule_chembl_id'])
 
     for i in range(0, len(chembl_ids), chunk_size):
-        for form in new_client.molecule_form.filter(molecule_chembl_id__in=chembl_ids[i:i + chunk_size]):
-            ID_forms[form['molecule_chembl_id']].add(form['parent_chembl_id'])
+        for form in new_client.molecule_form\
+            .filter(molecule_chembl_id__in=chembl_ids[i:i + chunk_size]):
+            ID_forms[form['molecule_chembl_id']]\
+                .add(form['parent_chembl_id'])
 
     values = []
     for x in ID_forms.values():
@@ -230,5 +278,6 @@ def _get_go_data(uniprot_code):
     url = "http://www.uniprot.org/uniprot/{}.txt".format(uniprot_code)
     data = urllib.request.urlopen(url)
     return data
+
 
 
