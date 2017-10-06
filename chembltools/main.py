@@ -44,6 +44,11 @@ def get_similar_molecules(chembl_ids, similarity=90, show_similarity=False):
     Get similar molecules based on a structural similarity search.
     Given a list of chembl ID's
 
+    Note:
+    -----
+    Similarity matches may appear to be ordered by descening similarity score,
+    though this is not guaranteed and should not be relied upon.
+
     Parameters:
     -----------
     chembl_ids: list-like
@@ -92,6 +97,12 @@ def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
     Get similar moleules based on a structural similarity.
     Given a list of structures in SMILE format.
 
+    Note:
+    -----
+    Similarity matches may appear to be ordered by descening similarity score,
+    though this is not guaranteed and should not be relied upon.
+
+
     Parameters:
     -----------
     smiles: list-like
@@ -123,6 +134,9 @@ def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
         similars = []
         res = similarity_query.filter(smiles=compound, similarity=similarity)
         for entry in res:
+            # TODO: check if 'similar' is actually an exact match, if so should
+            # this be returned? Can determine this by similarity == 100 or
+            # identical canonical SMILE strings
             if show_similarity:
                 similars.append((entry["molecule_chembl_id"],
                                  float(entry["similarity"])))
@@ -190,7 +204,18 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
 
 def get_uniprot_name(uniprot_ids):
     """
-    docstring
+    Given a list of uniprot IDs / accession codes, return a dictionary
+    mapping {uniprot_id: protein_name}
+
+    Parameters:
+    -----------
+    uniprot_ids: list-like
+        uniprot_id / accession codes
+
+
+    Returns:
+    --------
+    Dictionary {uniprot_id: protein_name}
     """
     uniprot_name_dict = {}
     for identifier in uniprot_ids:
