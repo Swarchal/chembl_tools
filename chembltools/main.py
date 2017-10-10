@@ -87,7 +87,7 @@ def get_similar_molecules(chembl_ids, similarity=90, show_similarity=False):
                 similars.append((entry["molecule_chembl_id"],
                                  float(entry["similarity"])))
             else:
-                similars.append(entry["molecule_chembl_id"]))
+                similars.append(entry["molecule_chembl_id"])
         similar_molecules[compound] = similars
     return similar_molecules
 
@@ -136,7 +136,7 @@ def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
         for entry in res:
             # TODO: check if 'similar' is actually an exact match, if so should
             # this be returned? Can determine this by similarity == 100 or
-            # identical canonical SMILE strings
+            # identical canonical SMILE strings.
             if show_similarity:
                 similars.append((entry["molecule_chembl_id"],
                                  float(entry["similarity"])))
@@ -196,7 +196,7 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
         for i in range(0, len(val), chunk_size):
             targets = new_client.target.filter(target_chembl_id__in=lval[i:i + chunk_size])
             uniprots = uniprots.union(
-                set(sum([[comp["accession"] for comp in t["target_components"]] for t in targets],[]))
+                set(sum([[comp["accession"] for comp in t["target_components"]] for t in targets], []))
             )
         compounds2targets[key] = uniprots
     return compounds2targets
@@ -219,11 +219,11 @@ def get_uniprot_name(uniprot_ids):
     """
     uniprot_name_dict = {}
     for identifier in uniprot_ids:
-        data = _get_go_data(identifier)
+        data = get_uniprot_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DE   RecName:"):
-                name = line.split("Full=")[-1]
+                name = line.split("Full=")[-1].strip(";\n")
                 break
         uniprot_name_dict[identifier] = name
     return uniprot_name_dict
@@ -236,7 +236,7 @@ def get_uniprot_info(uniprot_ids):
     uniprot_info_dict = {}
     for identifier in uniprot_ids:
         info = []
-        data = _get_go_data(identifier)
+        data = get_uniprot_data(identifier)
         for line in data:
             info.append(line.decode("utf-8"))
         uniprot_info_dict[identifier] = info
@@ -250,7 +250,7 @@ def get_go_name_from_uniprot_id(uniprot_ids):
     go_term_dict = {}
     for identifier in uniprot_ids:
         go_terms = []
-        data = _get_go_data(identifier)
+        data = get_uniprot_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -267,7 +267,7 @@ def get_go_code_from_uniprot_id(uniprot_ids):
     go_code_dict = {}
     for identifier in uniprot_ids:
         go_codes = []
-        data = _get_go_data(identifier)
+        data = get_uniprot_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -286,7 +286,7 @@ def get_go_from_uniprot_id(uniprot_ids):
     go_dict = {}
     for identifier in uniprot_ids:
         go_codes, go_names = [], []
-        data = _get_go_data(identifier)
+        data = get_uniprot_data(identifier)
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -296,7 +296,7 @@ def get_go_from_uniprot_id(uniprot_ids):
     return go_dict
 
 
-def _get_go_data(uniprot_code):
+def get_uniprot_data(uniprot_code):
     """
     internal function to fetch all uniprot text data for a single uniprot ID
     """
