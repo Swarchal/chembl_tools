@@ -146,10 +146,12 @@ def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
     return similar_molecules
 
 
-def get_target_ids(chembl_ids, organism="Homo sapiens"):
+def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False):
     """
     docstring
     """
+    if isinstance(chembl_ids, str):
+        chembl_ids = [chembl_ids]
     chembl_ids = list(chembl_ids)
     chunk_size = 50
     compounds2targets = {chembl: set() for chembl in chembl_ids}
@@ -194,11 +196,18 @@ def get_target_ids(chembl_ids, organism="Homo sapiens"):
         lval = list(val)
         uniprots = set()
         for i in range(0, len(val), chunk_size):
-            targets = new_client.target.filter(target_chembl_id__in=lval[i:i + chunk_size])
-            uniprots = uniprots.union(
-                set(sum([[comp["accession"] for comp in t["target_components"]] for t in targets], []))
-            )
+            targets = new_client.target\
+                .filter(target_chembl_id__in=lval[i:i + chunk_size])
+            uniprots_tmp = []
+            for target in targets:
+                for component in target["target_components"]:
+                    uniprots_tmp.append(component["accession"])
+            uniprots_tmp = set(uniprots_tmp)
+            uniprots = uniprots.union(uniprots_tmp)
         compounds2targets[key] = uniprots
+    if ignore_empty is True:
+        compounds2targets = {key: value for key, value in \
+            compounds2targets.items() if len(value) > 0}
     return compounds2targets
 
 
@@ -224,7 +233,7 @@ def get_uniprot_name(uniprot_ids):
             line = line.decode("utf-8")
             if line.startswith("DE   RecName:"):
                 name = line.split("Full=")[-1].strip(";\n")
-                break
+                break # already have the name, no need to keep iterating
         uniprot_name_dict[identifier] = name
     return uniprot_name_dict
 
@@ -301,8 +310,7 @@ def get_uniprot_data(uniprot_code):
     internal function to fetch all uniprot text data for a single uniprot ID
     """
     url = "http://www.uniprot.org/uniprot/{}.txt".format(uniprot_code)
-    data = urllib.request.urlopen(url)
-    return data
+    return urllib.request.urlopen(url)
 
 
 
