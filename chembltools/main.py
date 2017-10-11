@@ -205,6 +205,8 @@ def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False):
             uniprots_tmp = set(uniprots_tmp)
             uniprots = uniprots.union(uniprots_tmp)
         compounds2targets[key] = uniprots
+    # FIXME: pretty inefficient. shouldn't be creating the empty sets in the
+    #        first place
     if ignore_empty is True:
         compounds2targets = {key: value for key, value in \
             compounds2targets.items() if len(value) > 0}
@@ -228,7 +230,13 @@ def get_uniprot_name(uniprot_ids):
     """
     uniprot_name_dict = {}
     for identifier in uniprot_ids:
-        data = get_uniprot_data(identifier)
+        try:
+            data = get_uniprot_data(identifier)
+        except urllib.error.HTTPError as err:
+            if err.code == 404 or err.code == 300:
+                continue
+            else:
+                raise err
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DE   RecName:"):
@@ -245,7 +253,13 @@ def get_uniprot_info(uniprot_ids):
     uniprot_info_dict = {}
     for identifier in uniprot_ids:
         info = []
-        data = get_uniprot_data(identifier)
+        try:
+            data = get_uniprot_data(identifier)
+        except urllib.error.HTTPError as err:
+            if err.code == 404 or err.code == 300:
+                continue
+            else:
+                raise err
         for line in data:
             info.append(line.decode("utf-8"))
         uniprot_info_dict[identifier] = info
@@ -259,7 +273,13 @@ def get_go_name_from_uniprot_id(uniprot_ids):
     go_term_dict = {}
     for identifier in uniprot_ids:
         go_terms = []
-        data = get_uniprot_data(identifier)
+        try:
+            data = get_uniprot_data(identifier)
+        except urllib.error.HTTPError as err:
+            if err.code == 404 or err.code == 300:
+                continue
+            else:
+                raise err
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -276,7 +296,13 @@ def get_go_code_from_uniprot_id(uniprot_ids):
     go_code_dict = {}
     for identifier in uniprot_ids:
         go_codes = []
-        data = get_uniprot_data(identifier)
+        try:
+            data = get_uniprot_data(identifier)
+        except urllib.error.HTTPError as err:
+            if err.code == 404 or err.code == 300:
+                continue
+            else:
+                raise err
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
@@ -295,7 +321,14 @@ def get_go_from_uniprot_id(uniprot_ids):
     go_dict = {}
     for identifier in uniprot_ids:
         go_codes, go_names = [], []
-        data = get_uniprot_data(identifier)
+        try:
+            data = get_uniprot_data(identifier)
+        except urllib.error.HTTPError as err:
+            # handle 404 errors by skipping that identifier
+            if err.code == 404 or err.code == 300:
+                continue
+            else:
+                raise err
         for line in data:
             line = line.decode("utf-8")
             if line.startswith("DR   GO"):
