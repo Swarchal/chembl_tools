@@ -234,6 +234,7 @@ def get_uniprot_name(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
+                warn_missing(identifier)
                 continue
             else:
                 raise err
@@ -257,6 +258,7 @@ def get_uniprot_info(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
+                warn_missing_uniprot(identifier)
                 continue
             else:
                 raise err
@@ -277,6 +279,7 @@ def get_go_name_from_uniprot_id(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
+                warn_missing_uniprot(identifier)
                 continue
             else:
                 raise err
@@ -300,6 +303,7 @@ def get_go_code_from_uniprot_id(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
+                warn_missing_uniprot(identifier)
                 continue
             else:
                 raise err
@@ -326,6 +330,7 @@ def get_go_from_uniprot_id(uniprot_ids):
         except urllib.error.HTTPError as err:
             # handle 404 errors by skipping that identifier
             if err.code == 404 or err.code == 300:
+                warn_missing_uniprot(identifier)
                 continue
             else:
                 raise err
@@ -346,4 +351,10 @@ def get_uniprot_data(uniprot_code):
     return urllib.request.urlopen(url)
 
 
+def warn_missing_uniprot(identifier):
+    """
+    internal function to warn if identifier is not found in uniprot
+    """
+    msg = "Could not find {} entry on uniprot".format(identifier))
+    raise Warning(msg)
 
