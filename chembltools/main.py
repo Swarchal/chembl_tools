@@ -355,6 +355,6 @@ def warn_missing_uniprot(identifier):
     """
     internal function to warn if identifier is not found in uniprot
     """
-    msg = "Could not find {} entry on uniprot".format(identifier))
-    raise Warning(msg)
+    msg = "Warning: Could not find {} entry on uniprot".format(identifier))
+    print(msg)
 
