@@ -234,7 +234,7 @@ def get_uniprot_name(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
-                warn_missing(identifier)
+                warn_missing_uniprot(identifier)
                 continue
             else:
                 raise err
