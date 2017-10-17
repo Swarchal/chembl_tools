@@ -1,8 +1,7 @@
 """
-docstring
+module docstring
 """
 
-import urllib.request
 from chembl_webresource_client.new_client import new_client
 
 
@@ -146,12 +145,71 @@ def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
     return similar_molecules
 
 
-def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False):
+def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False,
+                   standard_value_threshold=None):
     """
-    docstring
+    TODO: docstring
+
+    Parameters:
+    -----------
+    chembl_ids: list-like
+
+    organism: string (default = "Homo sapiens")
+
+    ignore_empty: Boolean (default = False)
+
+    standard_value_threshold: numeric (default = None/infinity)
+
+
+
+    Returns:
+    ---------
+    Dictionary
+    """
+    compound_target_dict = _get_target_ids_as_chembl(
+            chembl_ids, organism, standard_value_threshold
+    )
+    chunk_size = 50
+
+    for key, val in compound_target_dict.items():
+        lval = list(val)
+        uniprots = set()
+        for i in range(0, len(val), chunk_size):
+            targets = new_client.target\
+                .filter(target_chembl_id__in=lval[i:i + chunk_size])
+            uniprots_tmp = set()
+            for target in targets:
+                if target["target_type"] == "SINGLE PROTEIN":
+                    for component in target["target_components"]:
+                        uniprots_tmp.add(component["accession"])
+                uniprots_tmp = set(uniprots_tmp)
+                uniprots = uniprots.union(uniprots_tmp)
+            compound_target_dict[key] = uniprots
+    # FIXME: pretty inefficient. shouldn't be creating the empty sets in the
+    #        first place
+    if ignore_empty:
+        compound_target_dict = {key: value for key, value in \
+            compound_target_dict.items() if len(value) > 0}
+    return compound_target_dict
+
+
+def _get_target_ids_as_chembl(chembl_ids, organism="Homo sapiens",
+                              standard_value_threshold=None):
+    """
+    internal function: Returns target ID, as CHEMBL_ID's
+    used within get_target_ids
+
+    Returns:
+    --------
+    dictionary
     """
     if isinstance(chembl_ids, str):
         chembl_ids = [chembl_ids]
+    # set default  threshold to infinity, so all values are below it,
+    # therefore all targets are returned
+    if standard_value_threshold is None:
+        standard_value_threshold = float("Inf")
+
     chembl_ids = list(chembl_ids)
     chunk_size = 50
     compounds2targets = {chembl: set() for chembl in chembl_ids}
@@ -188,173 +246,21 @@ def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False):
         activities = new_client.activity\
             .filter(molecule_chembl_id__in=values[i:i + chunk_size])\
             .filter(target_organism__istartswith=organism)
+            # FIXME: could potentially filter the standard value here
         for act in activities:
-            compounds2targets[forms_to_ID[act['molecule_chembl_id']]]\
-                .add(act['target_chembl_id'])
+            # if assay concentration readout is less than the threshold
+            # then add as a target
+            try:
+                # sometimes returns a NoneType if there is no standard value
+                # so place in the try:except block
+                standard_val = float(act["standard_value"])
+                if standard_val < standard_value_threshold and act["standard_units"] == "nM":
+                    compounds2targets[forms_to_ID[act['molecule_chembl_id']]]\
+                        .add(act['target_chembl_id'])
+            except TypeError:
+                # if we get a type error then there isn't a standard value
+                # associated with this target, so skip it
+                continue
 
-    for key, val in compounds2targets.items():
-        lval = list(val)
-        uniprots = set()
-        for i in range(0, len(val), chunk_size):
-            targets = new_client.target\
-                .filter(target_chembl_id__in=lval[i:i + chunk_size])
-            uniprots_tmp = []
-            for target in targets:
-                for component in target["target_components"]:
-                    uniprots_tmp.append(component["accession"])
-            uniprots_tmp = set(uniprots_tmp)
-            uniprots = uniprots.union(uniprots_tmp)
-        compounds2targets[key] = uniprots
-    # FIXME: pretty inefficient. shouldn't be creating the empty sets in the
-    #        first place
-    if ignore_empty is True:
-        compounds2targets = {key: value for key, value in \
-            compounds2targets.items() if len(value) > 0}
+
     return compounds2targets
-
-
-def get_uniprot_name(uniprot_ids):
-    """
-    Given a list of uniprot IDs / accession codes, return a dictionary
-    mapping {uniprot_id: protein_name}
-
-    Parameters:
-    -----------
-    uniprot_ids: list-like
-        uniprot_id / accession codes
-
-
-    Returns:
-    --------
-    Dictionary {uniprot_id: protein_name}
-    """
-    uniprot_name_dict = {}
-    for identifier in uniprot_ids:
-        try:
-            data = get_uniprot_data(identifier)
-        except urllib.error.HTTPError as err:
-            if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
-                continue
-            else:
-                raise err
-        for line in data:
-            line = line.decode("utf-8")
-            if line.startswith("DE   RecName:"):
-                name = line.split("Full=")[-1].strip(";\n")
-                break # already have the name, no need to keep iterating
-        uniprot_name_dict[identifier] = name
-    return uniprot_name_dict
-
-
-def get_uniprot_info(uniprot_ids):
-    """
-    get the entire uniprot website text for a list of uniprot ID's
-    """
-    uniprot_info_dict = {}
-    for identifier in uniprot_ids:
-        info = []
-        try:
-            data = get_uniprot_data(identifier)
-        except urllib.error.HTTPError as err:
-            if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
-                continue
-            else:
-                raise err
-        for line in data:
-            info.append(line.decode("utf-8"))
-        uniprot_info_dict[identifier] = info
-    return uniprot_info_dict
-
-
-def get_go_name_from_uniprot_id(uniprot_ids):
-    """
-    get descriptive go terms
-    """
-    go_term_dict = {}
-    for identifier in uniprot_ids:
-        go_terms = []
-        try:
-            data = get_uniprot_data(identifier)
-        except urllib.error.HTTPError as err:
-            if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
-                continue
-            else:
-                raise err
-        for line in data:
-            line = line.decode("utf-8")
-            if line.startswith("DR   GO"):
-                go_term = line.split(":")[-2].split(";")[-2]
-                go_terms.append(go_term)
-        go_term_dict[identifier] = go_terms
-    return go_term_dict
-
-
-def get_go_code_from_uniprot_id(uniprot_ids):
-    """
-    get go codes e.g "GO:003674"
-    """
-    go_code_dict = {}
-    for identifier in uniprot_ids:
-        go_codes = []
-        try:
-            data = get_uniprot_data(identifier)
-        except urllib.error.HTTPError as err:
-            if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
-                continue
-            else:
-                raise err
-        for line in data:
-            line = line.decode("utf-8")
-            if line.startswith("DR   GO"):
-                go_code = line.split(";")[1].strip()
-                go_codes.append(go_code)
-        go_code_dict[identifier] = go_codes
-    return go_code_dict
-
-
-def get_go_from_uniprot_id(uniprot_ids):
-    """
-    get both go code and descriptive name for a list of uniprot ID's
-    e.g.
-        {uniprot_id: [go_code, go_name]}
-    """
-    go_dict = {}
-    for identifier in uniprot_ids:
-        go_codes, go_names = [], []
-        try:
-            data = get_uniprot_data(identifier)
-        except urllib.error.HTTPError as err:
-            # handle 404 errors by skipping that identifier
-            if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
-                continue
-            else:
-                raise err
-        for line in data:
-            line = line.decode("utf-8")
-            if line.startswith("DR   GO"):
-                go_codes.append(line.split(";")[1].strip())
-                go_names.append(line.split(":")[-2].split(";")[-2])
-        go_dict[identifier] = list(zip(go_codes, go_names))
-    return go_dict
-
-
-def get_uniprot_data(uniprot_code):
-    """
-    internal function to fetch all uniprot text data for a single uniprot ID
-    """
-    url = "http://www.uniprot.org/uniprot/{}.txt".format(uniprot_code)
-    return urllib.request.urlopen(url)
-
-
-def warn_missing_uniprot(identifier):
-    """
-    internal function to warn if identifier is not found in uniprot
-    """
-    msg = "Warning: Could not find {} entry on uniprot".format(identifier))
-    print(msg)
-
