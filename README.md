@@ -3,59 +3,10 @@ chembl_tools
 
 A series of scripts to make the most of the [ChEMBL API](https://github.com/chembl/chembl_webresource_client)
 
-prerequisites
--------------
+Forked from [mgalardini/chembl_tools](https://github.com/mgalardini/chembl_tools), in order to turn the original
+command lines tools into python functions.
 
-* python 2.7+, 3.3+
-* chembl_webresource_client
 
-example
--------
-
-Given a list of compound names, for instance:
-
-    amoxicillin
-    oxacillin
-    amikacin
-    rifampicin
-    garbage
-    pseudomonic acid
-
-We first retrieve the corresponding ChEMBL IDs:
-
-    >>> src/get_chembl_ids compounds.txt > compounds.tsv
-    Found no exact match for "garbage", trying a search
-    Found no match for "garbage", skipping
-    Found no exact match for "pseudomonic acid", trying a search
-
-We can then retrieve the Uniprot IDs for the targets of each compound in a predefined species:
-
-    >>> src/get_target_ids compounds.tsv --organism "Escherichia coli"
-    chembl  target
-    CHEMBL1082      Q8GDC1
-    CHEMBL1082      P00959
-    CHEMBL1082      P62593
-    CHEMBL1082      P00811
-    CHEMBL1082      P0AD63
-    CHEMBL1082      A5HJU3
-    CHEMBL1082      Q5U7L7
-    CHEMBL177       P0A9A6
-    CHEMBL374478    P0A8V2 
-
-Or retrieve similar molecules with a predefined similarity threshold:
-
-    >>> src/get_similar_molecules compounds.tsv --similarity 99
-    query   target
-    CHEMBL177       CHEMBL3637935
-    CHEMBL177       CHEMBL3348834
-    CHEMBL177       CHEMBL1625316
-    CHEMBL177       CHEMBL1625035
-    CHEMBL1082      CHEMBL1433952
-    CHEMBL1082      CHEMBL1367635
-    CHEMBL1082      CHEMBL1473908
-    CHEMBL1082      CHEMBL174
-    CHEMBL819       CHEMBL3558540
-    
 Copyright
 ---------
 
