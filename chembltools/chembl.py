@@ -5,9 +5,9 @@ module docstring
 from chembl_webresource_client.new_client import new_client
 
 
-def inspect_synonyms(entry, term):
+def _inspect_synonyms(entry, term):
     """
-    docstring
+    internal function for get_chembl_id
     """
     return term.lower() in {
         x["molecule_synonym"].lower() for x in entry["molecule_synonyms"]
@@ -16,7 +16,19 @@ def inspect_synonyms(entry, term):
 
 def get_chembl_id(compounds):
     """
-    docstring
+    Search ChEMBL for compound names, return CHEMBL_ID
+
+    Parameters:
+    ----------
+
+    compounds: list-like
+
+    Returns:
+    --------
+    Dictionary
+    e.g:
+        {compound_1: CHEMBL_ID1,
+         compound_2: CHEMBL_ID2}
     """
     molecule = new_client.molecule
     ids = dict()
@@ -27,7 +39,7 @@ def get_chembl_id(compounds):
         if len(res) == 0:
             print("No exact match found for {}, trying a search for synonyms".format(compound))
             res = molecule.search(compound)
-            res = [i for i in res if inspect_synonyms(i, compound)]
+            res = [i for i in res if _inspect_synonyms(i, compound)]
             if len(res) == 0:
                 print("No match found for {}, skipping ...".format(compound))
                 continue
@@ -148,23 +160,33 @@ def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
 def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False,
                    standard_value_threshold=None):
     """
-    TODO: docstring
+    Given CHEMBL ID's of small molecules -- return UNIPROT accession codes
+    for protein targets.
 
     Parameters:
     -----------
     chembl_ids: list-like
+        CHEMBL identifiers for molecules.
 
     organism: string (default = "Homo sapiens")
+        Filter proteins from a specific organism.
 
     ignore_empty: Boolean (default = False)
+        If no protein targets are found for a given molecule, should the
+        molecule be a key in the returned dictionary?
 
     standard_value_threshold: numeric (default = None/infinity)
-
+        ChEMBL lists concentration values for the assays, typically IC/EC50s.
+        By default this will return all protein targets that have been assayed
+        with the queried small molecule. By passing a threshold value, only
+        proteins that have IC/EC50 values below the threshold are returned.
 
 
     Returns:
     ---------
     Dictionary
+    e.g
+        {CHEMBL_compound_ID: {UNIPROT_target_1, UNIPROT_target_2}}
     """
     compound_target_dict = _get_target_ids_as_chembl(
             chembl_ids, organism, standard_value_threshold
@@ -261,6 +283,5 @@ def _get_target_ids_as_chembl(chembl_ids, organism="Homo sapiens",
                 # if we get a type error then there isn't a standard value
                 # associated with this target, so skip it
                 continue
-
 
     return compounds2targets

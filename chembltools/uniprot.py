@@ -1,5 +1,5 @@
 """
-module docstring
+Functions for returning UNIPROT data, typically GO-terms.
 """
 
 
