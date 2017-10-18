@@ -4,14 +4,21 @@ Functions for returning UNIPROT data, typically GO-terms.
 
 
 import urllib.request
+import re
 
 
-def get_uniprot_data(uniprot_code):
+def get_uniprot_data(uniprot_code, fasta=False, decode=False):
     """
     internal function to fetch all uniprot text data for a single uniprot ID
     """
     url = "http://www.uniprot.org/uniprot/{}.txt".format(uniprot_code)
-    return urllib.request.urlopen(url)
+    if fasta:
+        url = url.replace("txt", "fasta")
+    if decode is False:
+        return urllib.request.urlopen(url)
+    else:
+        # decode into string
+        return [line.decode("utf-8") for line in urllib.request.urlopen(url)]
 
 
 def warn_missing_uniprot(identifier):
@@ -151,3 +158,21 @@ def get_go_from_uniprot_id(uniprot_ids):
         go_dict[identifier] = list(zip(go_codes, go_names))
     return go_dict
 
+
+def accession_to_gene_name(codes):
+    """
+    Convert uniprot accession codes to gene names
+    """
+    fasta_data = [get_uniprot_data(i, fasta=True, decode=True)[0] for i in codes]
+    for entry in fasta_data:
+        print(entry)
+    return [_get_gene_name(i) for i in fasta_data]
+
+
+def _get_gene_name(messy_string):
+    """
+    Get string between "GN=" and first ";" or " ".
+    Used for getting gene-name out of fasta file.
+    """
+    result = re.search("(?<=GN=)(.*?)(?=;| )", messy_string)
+    return result.group(1)
