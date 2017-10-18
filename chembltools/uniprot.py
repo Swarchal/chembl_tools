@@ -163,9 +163,9 @@ def accession_to_gene_name(codes):
     """
     Convert uniprot accession codes to gene names
     """
+    if isinstance(codes, str):
+        codes = [codes]
     fasta_data = [get_uniprot_data(i, fasta=True, decode=True)[0] for i in codes]
-    for entry in fasta_data:
-        print(entry)
     return [_get_gene_name(i) for i in fasta_data]
 
 
