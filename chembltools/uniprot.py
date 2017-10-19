@@ -18,15 +18,17 @@ def get_uniprot_data(uniprot_code, fasta=False, decode=False):
         return urllib.request.urlopen(url)
     else:
         # decode into string
-        return [line.decode("utf-8") for line in urllib.request.urlopen(url)]
+        data = urllib.request.urlopen(url)
+        return [line.decode("utf-8") for line in data]
 
 
-def warn_missing_uniprot(identifier):
+def warn_missing_uniprot(identifier, err_code):
     """
     internal function to warn if identifier is not found in uniprot
     """
-    msg = "Warning: Could not find {} entry on uniprot".format(identifier)
-    print(msg)
+    msg  = "Warning: Could not find '{}' entry on uniprot".format(identifier)
+    msg2 = "-- error code = {}.".format(err_code)
+    print(msg, msg2)
 
 
 def get_uniprot_name(uniprot_ids):
@@ -50,7 +52,7 @@ def get_uniprot_name(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
+                warn_missing_uniprot(identifier, err.code)
                 continue
             else:
                 raise err
@@ -74,7 +76,7 @@ def get_uniprot_info(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
+                warn_missing_uniprot(identifier, err.code)
                 continue
             else:
                 raise err
@@ -95,7 +97,7 @@ def get_go_name_from_uniprot_id(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
+                warn_missing_uniprot(identifier, err.code)
                 continue
             else:
                 raise err
@@ -119,7 +121,7 @@ def get_go_code_from_uniprot_id(uniprot_ids):
             data = get_uniprot_data(identifier)
         except urllib.error.HTTPError as err:
             if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
+                warn_missing_uniprot(identifier, err.code)
                 continue
             else:
                 raise err
@@ -146,7 +148,7 @@ def get_go_from_uniprot_id(uniprot_ids):
         except urllib.error.HTTPError as err:
             # handle 404 errors by skipping that identifier
             if err.code == 404 or err.code == 300:
-                warn_missing_uniprot(identifier)
+                warn_missing_uniprot(identifier, err.code)
                 continue
             else:
                 raise err
@@ -159,20 +161,45 @@ def get_go_from_uniprot_id(uniprot_ids):
     return go_dict
 
 
-def accession_to_gene_name(codes):
+def accession_to_gene_name(codes, cache=True):
     """
     Convert uniprot accession codes to gene names
     """
     if isinstance(codes, str):
         codes = [codes]
-    fasta_data = [get_uniprot_data(i, fasta=True, decode=True)[0] for i in codes]
-    return [_get_gene_name(i) for i in fasta_data]
+    if cache:
+        result = []
+        id_cache = {}
+        for uniprot_id in codes:
+            try:
+                gene_name = id_cache[uniprot_id]
+            except KeyError:
+                try:
+                    uniprot_data = get_uniprot_data(
+                        uniprot_id, fasta=True, decode=True
+                    )
+                    gene_name = _get_gene_name(uniprot_data[0])
+                    id_cache[uniprot_id] = gene_name
+                except urllib.error.HTTPError as err:
+                    if err.code == 404 or err.code == 300:
+                        warn_missing_uniprot(uniprot_id, err.code)
+                        continue
+                    else:
+                        raise err
+            result.append(gene_name)
+        return result
+    else:
+        fasta_data = [get_uniprot_data(i, fasta=True, decode=True)[0] for i in codes]
+        return [_get_gene_name(i) for i in fasta_data]
 
 
 def _get_gene_name(messy_string):
     """
     Get string between "GN=" and first ";" or " ".
-    Used for getting gene-name out of fasta file.
+    Used for getting the gene-name out of a fasta file.
     """
+    # FIXME: this will fail with a cryptic error message
+    #        if regex does not find anything
     result = re.search("(?<=GN=)(.*?)(?=;| )", messy_string)
     return result.group(1)
+
