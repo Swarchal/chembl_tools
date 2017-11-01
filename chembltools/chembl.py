@@ -57,7 +57,7 @@ def get_similar_molecules(chembl_ids, similarity=90, show_similarity=False):
 
     Note:
     -----
-    Similarity matches may appear to be ordered by descening similarity score,
+    Similarity matches may appear to be ordered by descending similarity score,
     though this is not guaranteed and should not be relied upon.
 
     Parameters:
@@ -285,3 +285,5 @@ def _get_target_ids_as_chembl(chembl_ids, organism="Homo sapiens",
                 continue
 
     return compounds2targets
+
+
