@@ -105,7 +105,7 @@ def get_similar_molecules(chembl_ids, similarity=90, show_similarity=False):
 
 def get_similar_molecules_smile(smiles, similarity=90, show_similarity=False):
     """
-    Get similar moleules based on a structural similarity.
+    Get similar molecules based on a structural similarity.
     Given a list of structures in SMILE format.
 
     Note:
