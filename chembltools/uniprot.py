@@ -201,7 +201,7 @@ def _get_gene_name(messy_string):
     Used for getting the gene-name out of a fasta file.
     """
     result = re.search("(?<=GN=)(.*?)(?=;| )", messy_string)
-    if out is None:
+    if result is None:
         raise RuntimeError("Could not parse gene name from FASTA string")
     return result.group(1)
 
