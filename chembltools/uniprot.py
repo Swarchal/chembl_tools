@@ -163,7 +163,7 @@ def get_go_from_uniprot_id(uniprot_ids):
 
 def accession_to_gene_name(codes, cache=True):
     """
-    Convert uniprot accession codes to gene names
+    Convert uniprot accession codes to gene-names
     """
     if isinstance(codes, str):
         codes = [codes]
@@ -188,9 +188,11 @@ def accession_to_gene_name(codes, cache=True):
                         raise err
             result.append(gene_name)
         return result
-    else:
+    elif cache is False:
         fasta_data = [get_uniprot_data(i, fasta=True, decode=True)[0] for i in codes]
         return [_get_gene_name(i) for i in fasta_data]
+    else:
+        raise TypeError("cache requires a Boolean")
 
 
 def _get_gene_name(messy_string):
@@ -198,8 +200,8 @@ def _get_gene_name(messy_string):
     Get string between "GN=" and first ";" or " ".
     Used for getting the gene-name out of a fasta file.
     """
-    # FIXME: this will fail with a cryptic error message
-    #        if regex does not find anything
     result = re.search("(?<=GN=)(.*?)(?=;| )", messy_string)
+    if out is None:
+        raise RuntimeError("Could not parse gene name from FASTA string")
     return result.group(1)
 
