@@ -175,7 +175,7 @@ def get_target_ids(chembl_ids, organism="Homo sapiens", ignore_empty=False,
         If no protein targets are found for a given molecule, should the
         molecule be a key in the returned dictionary?
 
-    standard_value_threshold: numeric (default = None/infinity)
+    standard_value_threshold: numeric -- typically nM (default = None/infinity)
         ChEMBL lists concentration values for the assays, typically IC/EC50s.
         By default this will return all protein targets that have been assayed
         with the queried small molecule. By passing a threshold value, only
